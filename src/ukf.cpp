@@ -12,38 +12,38 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
-  // if this is false, laser measurements will be ignored (except during init)
-  use_laser_ = true;
+	// if this is false, laser measurements will be ignored (except during init)
+	use_laser_ = true;
 
-  // if this is false, radar measurements will be ignored (except during init)
-  use_radar_ = true;
+	// if this is false, radar measurements will be ignored (except during init)
+	use_radar_ = true;
 
-  // initial state vector
-  x_ = VectorXd(5);
+	// initial state vector
+	x_ = VectorXd(5);
 
-  // initial covariance matrix
-  P_ = MatrixXd(5, 5);
+	// initial covariance matrix
+	P_ = MatrixXd(5, 5);
 
-  // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 0.9;
+	// Process noise standard deviation longitudinal acceleration in m/s^2
+	std_a_ = 0.99;
 
-  // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.57;
+	// Process noise standard deviation yaw acceleration in rad/s^2
+	std_yawdd_ = 0.6;
 
-  // Laser measurement noise standard deviation position1 in m
-  std_laspx_ = 0.4;
+	// Laser measurement noise standard deviation position1 in m
+	std_laspx_ = 0.15;
 
-  // Laser measurement noise standard deviation position2 in m
-  std_laspy_ = 0.4;
+	// Laser measurement noise standard deviation position2 in m
+	std_laspy_ = 0.15;
 
-  // Radar measurement noise standard deviation radius in m
-  std_radr_ = 0.25;
+	// Radar measurement noise standard deviation radius in m
+	std_radr_ = 0.3;
 
-  // Radar measurement noise standard deviation angle in rad
-  std_radphi_ = 0.03;
+	// Radar measurement noise standard deviation angle in rad
+	std_radphi_ = 0.03;
 
-  // Radar measurement noise standard deviation radius change in m/s
-  std_radrd_ = 0.4;
+	// Radar measurement noise standard deviation radius change in m/s
+	std_radrd_ = 0.3;
 
   /**
   TODO:
@@ -80,8 +80,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 	*/
 	if (!is_initialized_){
 
-		time_us_ = meas_package.timestamp_;
-
 		// --> 1. first measurement
 		if (meas_package.sensor_type_ == meas_package.RADAR){
 			float rho = meas_package.raw_measurements_(0);
@@ -98,9 +96,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 			x_ << meas_package.raw_measurements_[0], meas_package.raw_measurements_[1], 0, 0, 0;
 
 			// --> Deal with small measurements here
-			if (fabs(x_(0)) < 0.001 && fabs(x_(1)) < 0.001){
-					x_(0) = 0.001;
-					x_(1) = 0.001;
+			if (fabs(x_(0)) < 0.0001 && fabs(x_(1)) < 0.0001){
+					x_(0) = 0.0001;
+					x_(1) = 0.0001;
 			}
 		}
 
@@ -118,6 +116,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 			double weight = 0.5/(n_aug_+lambda_);
 			weights_(i) = weight;
 		}
+
+		time_us_ = meas_package.timestamp_;
 
 		is_initialized_ = true;
 
@@ -385,4 +385,14 @@ void UKF::UpdateMeasurements(MatrixXd Zsig, MeasurementPackage meas_package) {
 	//update state mean and covariance matrix
 	x_ = x_ + K * z_diff;
 	P_ = P_ - K*S*K.transpose();
+
+	// Calculate NIS
+	  if (meas_package.sensor_type_ == MeasurementPackage::RADAR){ // Radar
+		  MatrixXd NIS_radar_ = z.transpose() * S.inverse() * z;
+		  std::cout<< NIS_radar_(0) <<" Radar" << std::endl;
+	  }
+	  else if (meas_package.sensor_type_ == MeasurementPackage::LASER){ // Lidar
+		  MatrixXd NIS_laser_ = z.transpose() * S.inverse() * z;
+		  std::cout<< NIS_laser_(0) << " Laser" << std::endl;
+	  }
 }
